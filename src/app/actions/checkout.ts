@@ -2,24 +2,31 @@
 
 import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import { db, orders, user } from "@/db";
+import { db, orders, user, address as addressTable } from "@/db";
 import { MENU } from "@/lib/menu";
 import { generateReference, initializeTransaction } from "@/lib/paystack";
-import { buildWaMeLink, sendOwnerNotification } from "@/lib/whatsapp";
 
 type CheckoutInput = {
   items: Record<string, number>;
   address: string;
-  customerName?: string;
-  customerEmail?: string;
-  customerPhone?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  saveAddress?: boolean;
 };
 
 type CheckoutResult =
-  | { ok: true; authorizationUrl?: string; whatsappUrl?: string; reference: string }
-  | { ok: false; error: string; needIdentity?: boolean };
+  | {
+      ok: true;
+      reference: string;
+      // Real Paystack flow returns hosted payment URL
+      authorizationUrl?: string;
+      // Dev/no-key flow returns our simulated payment page
+      simulateUrl?: string;
+    }
+  | { ok: false; error: string };
 
 // Recompute totals server-side from MENU to prevent client tampering
 function recompute(items: Record<string, number>) {
@@ -35,77 +42,83 @@ function recompute(items: Record<string, number>) {
   return { subtotal, delivery, total: subtotal + delivery, items: enriched };
 }
 
-// Auto-create an account at checkout for guests (no password — random one server-side).
-// If email already exists, treat as a returning identified guest — keep session-less,
-// require them to log in or use that account on another device.
-async function ensureIdentifiedSession(input: {
-  name: string;
-  email: string;
-  phone: string;
-}): Promise<{ userId: string } | { error: string }> {
-  // Existing email check — if account exists, don't auto-create
+// Auto-create an account at checkout (no password — random one server-side).
+// Returns the user id and whether we created or matched an existing user.
+async function ensureIdentifiedUser(input: { name: string; email: string; phone: string }) {
   const existing = await db.select().from(user).where(eq(user.email, input.email)).limit(1);
   if (existing[0]) {
-    // For an existing email, we can't sign them in automatically (no password supplied).
-    // Treat checkout as guest-with-known-customer: record name/phone, link userId, no session.
+    // Existing email — link order, update phone if missing.
     if (input.phone && !existing[0].phone) {
       await db.update(user).set({ phone: input.phone }).where(eq(user.id, existing[0].id));
     }
-    return { userId: existing[0].id };
+    return { userId: existing[0].id, isNew: false };
   }
 
-  // New email → create user via Better Auth with a random unguessable password
   const randomPw = randomBytes(32).toString("base64url");
   const res = await auth.api.signUpEmail({
     body: { email: input.email, password: randomPw, name: input.name },
     headers: await headers(),
   });
 
-  if (!res?.user?.id) return { error: "Failed to create account" };
+  if (!res?.user?.id) throw new Error("Failed to create account");
 
-  // Persist phone on the new user
   await db.update(user).set({ phone: input.phone }).where(eq(user.id, res.user.id));
+  return { userId: res.user.id, isNew: true };
+}
 
-  return { userId: res.user.id };
+async function maybeSaveAddress(userId: string, line: string) {
+  // Don't duplicate — only save if no existing address has the same line.
+  const existing = await db
+    .select()
+    .from(addressTable)
+    .where(and(eq(addressTable.userId, userId), eq(addressTable.line, line)))
+    .limit(1);
+  if (existing[0]) return;
+
+  // Detect whether this is the user's first saved address → make it default.
+  const any = await db.select().from(addressTable).where(eq(addressTable.userId, userId)).limit(1);
+  await db.insert(addressTable).values({
+    userId,
+    label: "Home",
+    line,
+    city: "Asaba",
+    isDefault: any.length === 0,
+  });
 }
 
 export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResult> {
-  if (!input.address?.trim()) return { ok: false, error: "Address required" };
+  const trimmed = {
+    address: input.address?.trim() ?? "",
+    customerName: input.customerName?.trim() ?? "",
+    customerEmail: input.customerEmail?.trim() ?? "",
+    customerPhone: input.customerPhone?.trim() ?? "",
+  };
+
+  if (!trimmed.address || !trimmed.customerName || !trimmed.customerEmail || !trimmed.customerPhone) {
+    return { ok: false, error: "All fields required" };
+  }
 
   const recomputed = recompute(input.items);
   if (recomputed.subtotal <= 0) return { ok: false, error: "Cart is empty" };
 
   const session = await auth.api.getSession({ headers: await headers() });
-
   let userId: string | null = session?.user?.id ?? null;
-  let customerEmail = session?.user?.email ?? input.customerEmail ?? "";
-  let customerName = session?.user?.name ?? input.customerName ?? "";
-  let customerPhone = input.customerPhone ?? null;
 
-  // Guest with no session → require identity form
-  if (!session) {
-    const missing =
-      !input.customerName?.trim() ||
-      !input.customerEmail?.trim() ||
-      !input.customerPhone?.trim();
-    if (missing) {
-      return { ok: false, error: "Name, email and phone required to check out", needIdentity: true };
+  if (!userId) {
+    try {
+      const identityRes = await ensureIdentifiedUser({
+        name: trimmed.customerName,
+        email: trimmed.customerEmail,
+        phone: trimmed.customerPhone,
+      });
+      userId = identityRes.userId;
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Failed to identify user" };
     }
+  }
 
-    const identityRes = await ensureIdentifiedSession({
-      name: input.customerName!.trim(),
-      email: input.customerEmail!.trim(),
-      phone: input.customerPhone!.trim(),
-    });
-
-    if ("error" in identityRes) {
-      return { ok: false, error: identityRes.error };
-    }
-
-    userId = identityRes.userId;
-    customerEmail = input.customerEmail!.trim();
-    customerName = input.customerName!.trim();
-    customerPhone = input.customerPhone!.trim();
+  if (input.saveAddress && userId) {
+    await maybeSaveAddress(userId, trimmed.address).catch(() => null);
   }
 
   const reference = generateReference();
@@ -114,17 +127,17 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResu
     reference,
     userId,
     status: "pending_payment",
-    customerName,
-    customerEmail,
-    customerPhone,
-    deliveryAddress: input.address,
+    customerName: trimmed.customerName,
+    customerEmail: trimmed.customerEmail,
+    customerPhone: trimmed.customerPhone,
+    deliveryAddress: trimmed.address,
     items: recomputed.items,
     subtotal: recomputed.subtotal,
     delivery: recomputed.delivery,
     total: recomputed.total,
   });
 
-  // If Paystack is configured, init transaction
+  // Real Paystack: redirect to hosted payment.
   if (process.env.PAYSTACK_SECRET_KEY) {
     const origin =
       process.env.NEXT_PUBLIC_APP_URL ??
@@ -132,36 +145,23 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResu
       "http://localhost:3000";
 
     const init = await initializeTransaction({
-      email: customerEmail,
+      email: trimmed.customerEmail,
       amountNGN: recomputed.total,
       reference,
       callbackUrl: `${origin}/checkout/callback`,
-      metadata: { items: recomputed.items, address: input.address },
+      metadata: { items: recomputed.items, address: trimmed.address },
     });
 
     if (init.status && init.data) {
-      return { ok: true, authorizationUrl: init.data.authorization_url, reference };
+      return { ok: true, reference, authorizationUrl: init.data.authorization_url };
     }
     return { ok: false, error: init.message ?? "Paystack init failed" };
   }
 
-  // Fallback: skip payment, fire WhatsApp owner notification immediately + return wa.me deeplink
-  const orderForMsg = {
-    reference,
-    address: input.address,
-    items: input.items,
-    subtotal: recomputed.subtotal,
-    delivery: recomputed.delivery,
-    total: recomputed.total,
-    customerName,
-    customerPhone,
-  };
-
-  await sendOwnerNotification(orderForMsg).catch(() => null);
-
+  // Dev / no-key flow: simulated payment page mirrors the Paystack UX.
   return {
     ok: true,
-    whatsappUrl: buildWaMeLink(orderForMsg),
     reference,
+    simulateUrl: `/checkout/simulate/${reference}`,
   };
 }

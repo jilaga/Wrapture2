@@ -20,7 +20,7 @@ import { useSession } from "@/lib/auth-client";
 import { checkoutAction } from "@/app/actions/checkout";
 import { CheckoutForm } from "./CheckoutForm";
 
-type Step = "cart" | "identity";
+type Step = "cart" | "checkout";
 
 export function CartSheet({
   open,
@@ -46,54 +46,39 @@ export function CartSheet({
   const delivery = subtotal > 0 ? 1500 : 0;
   const total = subtotal + delivery;
 
-  const finalizeCheckout = (identity?: { name: string; email: string; phone: string }) => {
-    if (!address.trim()) {
-      toast.error("Add a delivery address first");
-      return;
-    }
+  const submitCheckout = (d: {
+    address: string;
+    name: string;
+    email: string;
+    phone: string;
+    saveAddress: boolean;
+  }) => {
+    setAddress(d.address);
     startTransition(async () => {
       const res = await checkoutAction({
         items,
-        address,
-        customerName: identity?.name ?? session?.user?.name ?? undefined,
-        customerEmail: identity?.email ?? session?.user?.email ?? undefined,
-        customerPhone: identity?.phone ?? undefined,
+        address: d.address,
+        customerName: d.name,
+        customerEmail: d.email,
+        customerPhone: d.phone,
+        saveAddress: d.saveAddress,
       });
 
-      if (res.ok && res.authorizationUrl) {
+      if (res.ok) {
         clear();
-        window.location.href = res.authorizationUrl;
-      } else if (res.ok && res.whatsappUrl) {
-        clear();
-        window.open(res.whatsappUrl, "_blank");
-        toast.success("Order sent", { description: "We'll confirm shortly." });
-        onOpenChange(false);
-        setStep("cart");
-      } else if (!res.ok) {
-        if (res.needIdentity) {
-          setStep("identity");
-        } else {
-          toast.error("Checkout failed", { description: res.error });
+        if (res.authorizationUrl) {
+          window.location.href = res.authorizationUrl;
+        } else if (res.simulateUrl) {
+          window.location.href = res.simulateUrl;
         }
+      } else {
+        toast.error("Checkout failed", { description: res.error });
       }
     });
   };
 
-  const handleCheckoutClick = () => {
-    if (!address.trim()) {
-      toast.error("Add a delivery address first");
-      return;
-    }
-    // If we already have a session, skip the identity step
-    if (session?.user?.email) {
-      finalizeCheckout();
-    } else {
-      setStep("identity");
-    }
-  };
-
   const handleOpenChange = (v: boolean) => {
-    if (!v) setStep("cart"); // reset on close
+    if (!v) setStep("cart");
     onOpenChange(v);
   };
 
@@ -111,13 +96,16 @@ export function CartSheet({
           )}
         </SheetHeader>
 
-        {step === "identity" ? (
+        {step === "checkout" ? (
           <CheckoutForm
+            defaultAddress={address}
             defaultName={session?.user?.name ?? ""}
             defaultEmail={session?.user?.email ?? ""}
+            hasSavedAddresses={false}
+            totalLabel={formatNGN(total)}
             pending={pending}
             onBack={() => setStep("cart")}
-            onSubmit={(d) => finalizeCheckout(d)}
+            onSubmit={submitCheckout}
           />
         ) : (
           <>
@@ -151,19 +139,11 @@ export function CartSheet({
                       <p className="text-xs text-muted-foreground mt-1">{formatNGN(m.price)}</p>
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-1 rounded-2xl border border-border">
-                          <button
-                            onClick={() => remove(m.id)}
-                            className="p-1.5 hover:bg-secondary rounded-2xl"
-                            aria-label="Decrease"
-                          >
+                          <button onClick={() => remove(m.id)} className="p-1.5 hover:bg-secondary rounded-2xl" aria-label="Decrease">
                             <Minus className="w-3 h-3" />
                           </button>
                           <span className="text-sm w-5 text-center">{items[m.id]}</span>
-                          <button
-                            onClick={() => add(m.id)}
-                            className="p-1.5 hover:bg-secondary rounded-2xl"
-                            aria-label="Increase"
-                          >
+                          <button onClick={() => add(m.id)} className="p-1.5 hover:bg-secondary rounded-2xl" aria-label="Increase">
                             <Plus className="w-3 h-3" />
                           </button>
                         </div>
@@ -192,20 +172,13 @@ export function CartSheet({
                     <span>{formatNGN(total)}</span>
                   </div>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Delivery address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full h-12 px-4 rounded-2xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                />
                 <Button
-                  onClick={handleCheckoutClick}
+                  onClick={() => setStep("checkout")}
                   disabled={pending}
                   size="lg"
                   className="w-full rounded-2xl h-14 uppercase tracking-[0.2em] text-xs bg-primary hover:bg-primary/90 shadow-blood"
                 >
-                  {pending ? "Processing…" : `Checkout — ${formatNGN(total)}`}
+                  Checkout — {formatNGN(total)}
                 </Button>
               </SheetFooter>
             )}

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package } from "lucide-react";
 import { formatNGN } from "@/lib/menu";
+import { ReorderButton } from "@/components/account/ReorderButton";
 
 const STATUS_LABEL: Record<string, string> = {
   pending_payment: "Awaiting payment",
@@ -71,9 +72,12 @@ export default async function OrdersPage() {
                   </li>
                 ))}
               </ul>
-              <div className="flex justify-between pt-4 mt-4 border-t border-border text-sm">
-                <span className="text-muted-foreground">Total</span>
-                <span className="font-semibold">{formatNGN(o.total)}</span>
+              <div className="flex justify-between items-center pt-4 mt-4 border-t border-border text-sm">
+                <div>
+                  <span className="text-muted-foreground">Total: </span>
+                  <span className="font-semibold">{formatNGN(o.total)}</span>
+                </div>
+                <ReorderButton items={o.items ?? []} address={o.deliveryAddress} />
               </div>
             </article>
           ))}

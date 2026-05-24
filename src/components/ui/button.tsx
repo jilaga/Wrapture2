@@ -44,11 +44,21 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // base-ui defaults nativeButton to true; explicitly opt-out when a non-button
+  // is rendered (e.g. <Link>) so it stops warning.
+  const nativeButtonProp =
+    nativeButton !== undefined
+      ? { nativeButton }
+      : props.render !== undefined
+        ? { nativeButton: false as const }
+        : {}
   return (
     <ButtonPrimitive
       data-slot="button"
+      {...nativeButtonProp}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

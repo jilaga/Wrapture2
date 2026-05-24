@@ -1,10 +1,12 @@
-import { redirect } from "next/navigation";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { desc, eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, orders } from "@/db";
 import { Header } from "@/components/layout/Header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Package } from "lucide-react";
 import { formatNGN } from "@/lib/menu";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -19,13 +21,14 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function OrdersPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
 
-  const list = await db
-    .select()
-    .from(orders)
-    .where(eq(orders.userId, session.user.id))
-    .orderBy(desc(orders.createdAt));
+  const list = session
+    ? await db
+        .select()
+        .from(orders)
+        .where(eq(orders.userId, session.user.id))
+        .orderBy(desc(orders.createdAt))
+    : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -34,7 +37,19 @@ export default async function OrdersPage() {
         <h1 className="font-display text-5xl mb-2">Your orders</h1>
         <p className="text-muted-foreground mb-10">Every wrap you&apos;ve had with us.</p>
 
-        {list.length === 0 && (
+        {!session && (
+          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+            <Package className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-6">
+              No orders yet. Place one — we&apos;ll save it here automatically.
+            </p>
+            <Button render={<Link href="/" />} size="lg" className="rounded-2xl h-12 px-6 uppercase tracking-widest text-xs">
+              Browse menu
+            </Button>
+          </div>
+        )}
+
+        {session && list.length === 0 && (
           <p className="text-sm text-muted-foreground text-center py-12">No orders yet.</p>
         )}
 

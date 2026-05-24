@@ -1,15 +1,41 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
-import { Bookmark, Package, LogOut } from "lucide-react";
+import { Bookmark, Package, ShoppingBag } from "lucide-react";
 import { SignOutButton } from "@/components/account/SignOutButton";
 
 export default async function AccountPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) redirect("/login");
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        <Header />
+        <main className="container-px pt-28 pb-16 max-w-2xl">
+          <h1 className="font-display text-5xl md:text-6xl mb-2">Your account</h1>
+          <p className="text-muted-foreground mb-10">
+            No account yet. Drop your details at checkout and we&apos;ll create one for you — no password needed.
+          </p>
+          <div className="rounded-3xl border border-border bg-card p-8 text-center">
+            <ShoppingBag className="w-10 h-10 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground mb-6">
+              Pick something from the menu, then check out to identify yourself.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button render={<Link href="/" />} size="lg" className="rounded-2xl h-12 px-6 uppercase tracking-widest text-xs">
+                Browse menu
+              </Button>
+              <Button variant="outline" render={<Link href="/login" />} size="lg" className="rounded-2xl h-12 px-6 uppercase tracking-widest text-xs">
+                Have an account?
+              </Button>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">

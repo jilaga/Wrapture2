@@ -1,8 +1,10 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
+import { eq } from "drizzle-orm";
 import { auth } from "@/lib/auth";
-import { db, orders } from "@/db";
+import { db, orders, user } from "@/db";
 import { MENU } from "@/lib/menu";
 import { generateReference, initializeTransaction } from "@/lib/paystack";
 import { buildWaMeLink, sendOwnerNotification } from "@/lib/whatsapp";
@@ -10,9 +12,6 @@ import { buildWaMeLink, sendOwnerNotification } from "@/lib/whatsapp";
 type CheckoutInput = {
   items: Record<string, number>;
   address: string;
-  subtotal: number;
-  delivery: number;
-  total: number;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
@@ -20,7 +19,7 @@ type CheckoutInput = {
 
 type CheckoutResult =
   | { ok: true; authorizationUrl?: string; whatsappUrl?: string; reference: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; needIdentity?: boolean };
 
 // Recompute totals server-side from MENU to prevent client tampering
 function recompute(items: Record<string, number>) {
@@ -36,6 +35,40 @@ function recompute(items: Record<string, number>) {
   return { subtotal, delivery, total: subtotal + delivery, items: enriched };
 }
 
+// Auto-create an account at checkout for guests (no password — random one server-side).
+// If email already exists, treat as a returning identified guest — keep session-less,
+// require them to log in or use that account on another device.
+async function ensureIdentifiedSession(input: {
+  name: string;
+  email: string;
+  phone: string;
+}): Promise<{ userId: string } | { error: string }> {
+  // Existing email check — if account exists, don't auto-create
+  const existing = await db.select().from(user).where(eq(user.email, input.email)).limit(1);
+  if (existing[0]) {
+    // For an existing email, we can't sign them in automatically (no password supplied).
+    // Treat checkout as guest-with-known-customer: record name/phone, link userId, no session.
+    if (input.phone && !existing[0].phone) {
+      await db.update(user).set({ phone: input.phone }).where(eq(user.id, existing[0].id));
+    }
+    return { userId: existing[0].id };
+  }
+
+  // New email → create user via Better Auth with a random unguessable password
+  const randomPw = randomBytes(32).toString("base64url");
+  const res = await auth.api.signUpEmail({
+    body: { email: input.email, password: randomPw, name: input.name },
+    headers: await headers(),
+  });
+
+  if (!res?.user?.id) return { error: "Failed to create account" };
+
+  // Persist phone on the new user
+  await db.update(user).set({ phone: input.phone }).where(eq(user.id, res.user.id));
+
+  return { userId: res.user.id };
+}
+
 export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResult> {
   if (!input.address?.trim()) return { ok: false, error: "Address required" };
 
@@ -43,16 +76,43 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResu
   if (recomputed.subtotal <= 0) return { ok: false, error: "Cart is empty" };
 
   const session = await auth.api.getSession({ headers: await headers() });
-  const customerEmail =
-    input.customerEmail ?? session?.user?.email ?? "guest@wrapture.local";
-  const customerName = input.customerName ?? session?.user?.name ?? null;
-  const customerPhone = input.customerPhone ?? null;
+
+  let userId: string | null = session?.user?.id ?? null;
+  let customerEmail = session?.user?.email ?? input.customerEmail ?? "";
+  let customerName = session?.user?.name ?? input.customerName ?? "";
+  let customerPhone = input.customerPhone ?? null;
+
+  // Guest with no session → require identity form
+  if (!session) {
+    const missing =
+      !input.customerName?.trim() ||
+      !input.customerEmail?.trim() ||
+      !input.customerPhone?.trim();
+    if (missing) {
+      return { ok: false, error: "Name, email and phone required to check out", needIdentity: true };
+    }
+
+    const identityRes = await ensureIdentifiedSession({
+      name: input.customerName!.trim(),
+      email: input.customerEmail!.trim(),
+      phone: input.customerPhone!.trim(),
+    });
+
+    if ("error" in identityRes) {
+      return { ok: false, error: identityRes.error };
+    }
+
+    userId = identityRes.userId;
+    customerEmail = input.customerEmail!.trim();
+    customerName = input.customerName!.trim();
+    customerPhone = input.customerPhone!.trim();
+  }
 
   const reference = generateReference();
 
   await db.insert(orders).values({
     reference,
-    userId: session?.user?.id ?? null,
+    userId,
     status: "pending_payment",
     customerName,
     customerEmail,

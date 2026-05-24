@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { eq } from "drizzle-orm";
 import { db, orders } from "@/db";
 import { sendOwnerNotification } from "@/lib/whatsapp";
+import { setOrderStatus } from "@/lib/order-status";
 
 export const runtime = "nodejs";
 
@@ -27,15 +28,9 @@ export async function POST(req: NextRequest) {
 
   if (event.event === "charge.success") {
     const reference = event.data.reference;
-    const [order] = await db
-      .update(orders)
-      .set({
-        status: "paid",
-        paystackTxnId: String(event.data.id),
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.reference, reference))
-      .returning();
+    const order = await setOrderStatus(reference, "paid", {
+      paystackTxnId: String(event.data.id),
+    });
 
     if (order && !order.whatsappSent) {
       const itemsMap: Record<string, number> = {};

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { MENU, formatNGN } from "@/lib/menu";
 import { useCart } from "@/store/cart";
 import { useSession } from "@/lib/auth-client";
 import { checkoutAction } from "@/app/actions/checkout";
+import { listMyAddresses, type SavedAddress } from "@/app/actions/addresses";
 import { CheckoutForm } from "./CheckoutForm";
 
 type Step = "cart" | "checkout";
@@ -39,6 +40,19 @@ export function CartSheet({
   const { data: session } = useSession();
   const [pending, startTransition] = useTransition();
   const [step, setStep] = useState<Step>("cart");
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+
+  // Lazy-fetch saved addresses once when stepping into checkout while authed
+  useEffect(() => {
+    if (step !== "checkout" || !session?.user) return;
+    let cancelled = false;
+    listMyAddresses().then((rows) => {
+      if (!cancelled) setSavedAddresses(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, session?.user]);
 
   const cartItems = MENU.filter((m) => items[m.id]);
   const cartCount = Object.values(items).reduce((a, b) => a + b, 0);
@@ -101,7 +115,7 @@ export function CartSheet({
             defaultAddress={address}
             defaultName={session?.user?.name ?? ""}
             defaultEmail={session?.user?.email ?? ""}
-            hasSavedAddresses={false}
+            savedAddresses={savedAddresses}
             totalLabel={formatNGN(total)}
             pending={pending}
             onBack={() => setStep("cart")}

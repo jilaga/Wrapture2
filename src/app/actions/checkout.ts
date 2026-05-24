@@ -122,11 +122,13 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResu
   }
 
   const reference = generateReference();
+  const now = new Date().toISOString();
 
   await db.insert(orders).values({
     reference,
     userId,
     status: "pending_payment",
+    statusHistory: [{ status: "pending_payment", at: now }],
     customerName: trimmed.customerName,
     customerEmail: trimmed.customerEmail,
     customerPhone: trimmed.customerPhone,

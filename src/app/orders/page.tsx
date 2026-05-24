@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { desc, eq } from "drizzle-orm";
-import { CheckCircle2, Package } from "lucide-react";
+import { CheckCircle2, ChevronRight, Package } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { db, orders } from "@/db";
 import { Header } from "@/components/layout/Header";
@@ -9,18 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatNGN } from "@/lib/menu";
 import { ReorderButton } from "@/components/account/ReorderButton";
+import { STATUS_LABEL } from "@/lib/order-status";
+import type { OrderStatus } from "@/db/schema";
 
 type SearchParams = Promise<{ placed?: string }>;
-
-const STATUS_LABEL: Record<string, string> = {
-  pending_payment: "Awaiting payment",
-  paid: "Paid · preparing",
-  preparing: "In the kitchen",
-  out_for_delivery: "Out for delivery",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-  failed: "Failed",
-};
 
 export default async function OrdersPage({
   searchParams,
@@ -79,29 +71,45 @@ export default async function OrdersPage({
             return (
               <article
                 key={o.id}
-                className={`rounded-3xl border bg-card p-6 ${isJustPlaced ? "border-primary shadow-blood" : "border-border"}`}
+                className={`rounded-3xl border bg-card p-6 transition-shadow ${
+                  isJustPlaced ? "border-primary shadow-blood" : "border-border hover:border-foreground/30"
+                }`}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-widest text-muted-foreground">{o.reference}</p>
-                    <p className="text-sm mt-1">{new Date(o.createdAt).toLocaleString("en-NG")}</p>
+                <Link href={`/orders/${o.reference}`} className="block">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-widest text-muted-foreground">{o.reference}</p>
+                      <p className="text-sm mt-1">{new Date(o.createdAt).toLocaleString("en-NG")}</p>
+                    </div>
+                    <Badge className="bg-primary text-primary-foreground">
+                      {STATUS_LABEL[o.status as OrderStatus] ?? o.status}
+                    </Badge>
                   </div>
-                  <Badge className="bg-primary text-primary-foreground">{STATUS_LABEL[o.status] ?? o.status}</Badge>
-                </div>
-                <ul className="space-y-1 text-sm">
-                  {(o.items ?? []).map((it) => (
-                    <li key={it.id} className="flex justify-between">
-                      <span>{it.qty}× {it.name}</span>
-                      <span className="text-muted-foreground">{formatNGN(it.price * it.qty)}</span>
-                    </li>
-                  ))}
-                </ul>
+                  <ul className="space-y-1 text-sm">
+                    {(o.items ?? []).map((it) => (
+                      <li key={it.id} className="flex justify-between">
+                        <span>{it.qty}× {it.name}</span>
+                        <span className="text-muted-foreground">{formatNGN(it.price * it.qty)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </Link>
                 <div className="flex justify-between items-center pt-4 mt-4 border-t border-border text-sm">
                   <div>
                     <span className="text-muted-foreground">Total: </span>
                     <span className="font-semibold">{formatNGN(o.total)}</span>
                   </div>
-                  <ReorderButton items={o.items ?? []} address={o.deliveryAddress} />
+                  <div className="flex gap-2">
+                    <ReorderButton items={o.items ?? []} address={o.deliveryAddress} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      render={<Link href={`/orders/${o.reference}`} />}
+                      className="rounded-2xl"
+                    >
+                      Track <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                    </Button>
+                  </div>
                 </div>
               </article>
             );

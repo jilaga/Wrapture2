@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { SavedAddress } from "@/app/actions/addresses";
 
 type Props = {
   defaultAddress?: string;
   defaultName?: string;
   defaultEmail?: string;
   defaultPhone?: string;
-  hasSavedAddresses?: boolean;
+  savedAddresses?: SavedAddress[];
   totalLabel: string;
   pending: boolean;
   onBack: () => void;
@@ -29,24 +30,33 @@ export function CheckoutForm({
   defaultName = "",
   defaultEmail = "",
   defaultPhone = "",
-  hasSavedAddresses = false,
+  savedAddresses = [],
   totalLabel,
   pending,
   onBack,
   onSubmit,
 }: Props) {
-  // Default "save for next time" to checked only when user has no saved addresses yet
-  const [saveAddress, setSaveAddress] = useState(!hasSavedAddresses);
+  const hasSaved = savedAddresses.length > 0;
+  // Pre-select default saved address if available, otherwise fall back to last-used cart address
+  const initialAddress = hasSaved
+    ? savedAddresses.find((a) => a.isDefault)?.line ?? savedAddresses[0].line
+    : defaultAddress;
+
+  const [addressLine, setAddressLine] = useState(initialAddress);
+  const [saveAddress, setSaveAddress] = useState(!hasSaved);
+
+  const isFromSaved = savedAddresses.some((a) => a.line === addressLine);
 
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     onSubmit({
-      address: (form.get("address") ?? "").toString().trim(),
+      address: addressLine.trim(),
       name: (form.get("name") ?? "").toString().trim(),
       email: (form.get("email") ?? "").toString().trim(),
       phone: (form.get("phone") ?? "").toString().trim(),
-      saveAddress,
+      // Only save if the line is genuinely new
+      saveAddress: !isFromSaved && saveAddress,
     });
   };
 
@@ -71,28 +81,68 @@ export function CheckoutForm({
         <div className="space-y-4">
           <div>
             <Label htmlFor="address">Delivery address</Label>
+
+            {hasSaved && (
+              <div className="mt-2 mb-2 flex flex-wrap gap-2">
+                {savedAddresses.map((a) => {
+                  const active = a.line === addressLine;
+                  return (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setAddressLine(a.line)}
+                      className={`text-xs px-3 py-2 rounded-2xl border transition-colors flex items-center gap-1.5 ${
+                        active
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-card hover:border-foreground/40 text-muted-foreground"
+                      }`}
+                    >
+                      <MapPin className="w-3 h-3" />
+                      {a.label}
+                      {a.isDefault && <span className="text-[9px] uppercase tracking-widest opacity-60">· default</span>}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setAddressLine("")}
+                  className={`text-xs px-3 py-2 rounded-2xl border transition-colors ${
+                    !isFromSaved
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-dashed border-border bg-card hover:border-foreground/40 text-muted-foreground"
+                  }`}
+                >
+                  + New address
+                </button>
+              </div>
+            )}
+
             <textarea
               id="address"
               name="address"
               required
-              defaultValue={defaultAddress}
+              value={addressLine}
+              onChange={(e) => setAddressLine(e.target.value)}
               rows={2}
               placeholder="No. 12, Nnebisi Road, off Anwai, Asaba"
               className="mt-1.5 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
-            <label className="mt-2 flex items-start gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={saveAddress}
-                onChange={(e) => setSaveAddress(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-border accent-primary cursor-pointer"
-              />
-              <span className="text-xs text-muted-foreground leading-tight">
-                {hasSavedAddresses
-                  ? "Add this to my saved addresses"
-                  : "Remember this address for future orders"}
-              </span>
-            </label>
+
+            {!isFromSaved && addressLine.trim().length > 0 && (
+              <label className="mt-2 flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={saveAddress}
+                  onChange={(e) => setSaveAddress(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded border-border accent-primary cursor-pointer"
+                />
+                <span className="text-xs text-muted-foreground leading-tight">
+                  {hasSaved
+                    ? "Add this to my saved addresses"
+                    : "Remember this address for future orders"}
+                </span>
+              </label>
+            )}
           </div>
 
           <div>

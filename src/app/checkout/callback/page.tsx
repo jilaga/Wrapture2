@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db, orders } from "@/db";
 import { verifyTransaction } from "@/lib/paystack";
 import { sendOwnerNotification } from "@/lib/whatsapp";
+import { setOrderStatus } from "@/lib/order-status";
 import { Button } from "@/components/ui/button";
 
 type SearchParams = Promise<{ reference?: string; trxref?: string }>;
@@ -33,11 +34,9 @@ export default async function CallbackPage({
   try {
     const verifyRes = await verifyTransaction(reference);
     if (verifyRes?.data?.status === "success") {
-      const [order] = await db
-        .update(orders)
-        .set({ status: "paid", paystackTxnId: String(verifyRes.data.id) })
-        .where(eq(orders.reference, reference))
-        .returning();
+      const order = await setOrderStatus(reference, "paid", {
+        paystackTxnId: String(verifyRes.data.id),
+      });
 
       if (order && !order.whatsappSent) {
         const itemsMap: Record<string, number> = {};
@@ -68,7 +67,7 @@ export default async function CallbackPage({
     }
 
     if (verifyRes?.data?.status === "failed") {
-      await db.update(orders).set({ status: "failed" }).where(eq(orders.reference, reference));
+      await setOrderStatus(reference, "failed");
       return (
         <main className="min-h-screen grid place-items-center p-6 bg-background text-foreground">
           <div className="max-w-md text-center">

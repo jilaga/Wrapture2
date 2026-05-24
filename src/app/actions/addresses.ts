@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { db, address } from "@/db";
 
@@ -10,6 +10,31 @@ async function requireUser() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Unauthorized");
   return session.user.id;
+}
+
+export type SavedAddress = {
+  id: string;
+  label: string;
+  line: string;
+  city: string;
+  isDefault: boolean;
+};
+
+export async function listMyAddresses(): Promise<SavedAddress[]> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return [];
+  const rows = await db
+    .select()
+    .from(address)
+    .where(eq(address.userId, session.user.id))
+    .orderBy(desc(address.isDefault), desc(address.createdAt));
+  return rows.map((a) => ({
+    id: a.id,
+    label: a.label,
+    line: a.line,
+    city: a.city,
+    isDefault: a.isDefault,
+  }));
 }
 
 export async function addAddress(form: FormData) {

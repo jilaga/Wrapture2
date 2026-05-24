@@ -88,13 +88,34 @@ async function main() {
   const o3 = ord([{ id: "classic", qty: 1 }]);
 
   const now = Date.now();
+  const minsAgo = (n: number) => new Date(now - n * 60 * 1000);
   const daysAgo = (n: number) => new Date(now - n * 24 * 60 * 60 * 1000);
+
+  const history = (
+    base: Date,
+    stages: { status: schema.OrderStatus; minutesAfter: number }[]
+  ): schema.OrderStatusEvent[] =>
+    stages.map((s) => ({
+      status: s.status,
+      at: new Date(base.getTime() + s.minutesAfter * 60 * 1000).toISOString(),
+    }));
+
+  const deliveredAt = daysAgo(7);
+  const outAt = minsAgo(18);
+  const pendingAt = minsAgo(2);
 
   await db.insert(schema.orders).values([
     {
       reference: `WRP_SEED_${Date.now()}_DELIVERED`,
       userId,
       status: "delivered",
+      statusHistory: history(deliveredAt, [
+        { status: "pending_payment", minutesAfter: 0 },
+        { status: "paid", minutesAfter: 1 },
+        { status: "preparing", minutesAfter: 2 },
+        { status: "out_for_delivery", minutesAfter: 22 },
+        { status: "delivered", minutesAfter: 38 },
+      ]),
       customerName: "Ada Test",
       customerEmail: TEST_EMAIL,
       customerPhone: "+2348012345678",
@@ -105,13 +126,19 @@ async function main() {
       total: o1.total,
       whatsappSent: true,
       paystackTxnId: "seed_txn_1",
-      createdAt: daysAgo(7),
-      updatedAt: daysAgo(7),
+      createdAt: deliveredAt,
+      updatedAt: new Date(deliveredAt.getTime() + 38 * 60 * 1000),
     },
     {
       reference: `WRP_SEED_${Date.now()}_OUTFORDELIVERY`,
       userId,
       status: "out_for_delivery",
+      statusHistory: history(outAt, [
+        { status: "pending_payment", minutesAfter: 0 },
+        { status: "paid", minutesAfter: 1 },
+        { status: "preparing", minutesAfter: 2 },
+        { status: "out_for_delivery", minutesAfter: 18 },
+      ]),
       customerName: "Ada Test",
       customerEmail: TEST_EMAIL,
       customerPhone: "+2348012345678",
@@ -122,13 +149,14 @@ async function main() {
       total: o2.total,
       whatsappSent: true,
       paystackTxnId: "seed_txn_2",
-      createdAt: daysAgo(0),
-      updatedAt: daysAgo(0),
+      createdAt: outAt,
+      updatedAt: new Date(outAt.getTime() + 18 * 60 * 1000),
     },
     {
       reference: `WRP_SEED_${Date.now()}_PENDING`,
       userId,
       status: "pending_payment",
+      statusHistory: history(pendingAt, [{ status: "pending_payment", minutesAfter: 0 }]),
       customerName: "Ada Test",
       customerEmail: TEST_EMAIL,
       customerPhone: "+2348012345678",
@@ -137,11 +165,11 @@ async function main() {
       subtotal: o3.subtotal,
       delivery: o3.delivery,
       total: o3.total,
-      createdAt: daysAgo(0),
-      updatedAt: daysAgo(0),
+      createdAt: pendingAt,
+      updatedAt: pendingAt,
     },
   ]);
-  console.log("  + 3 orders (1 delivered, 1 out_for_delivery, 1 pending_payment)");
+  console.log("  + 3 orders w/ status history (delivered, out_for_delivery, pending_payment)");
 
   console.log("");
   console.log("✓ seed complete");

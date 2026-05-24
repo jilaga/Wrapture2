@@ -71,7 +71,7 @@ export const address = pgTable("address", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const orderStatus = pgEnum("order_status", [
+export const ORDER_STATUSES = [
   "pending_payment",
   "paid",
   "preparing",
@@ -79,19 +79,29 @@ export const orderStatus = pgEnum("order_status", [
   "delivered",
   "cancelled",
   "failed",
-]);
+] as const;
+
+export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+export type OrderStatusEvent = {
+  status: OrderStatus;
+  at: string; // ISO timestamp
+};
+
+export const orderStatus = pgEnum("order_status", ORDER_STATUSES);
 
 export const orders = pgTable("orders", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id").references(() => user.id, { onDelete: "set null" }), // null = guest checkout
   reference: text("reference").notNull().unique(), // Paystack reference
   status: orderStatus("status").notNull().default("pending_payment"),
+  statusHistory: jsonb("status_history").$type<OrderStatusEvent[]>().notNull().default([]),
   customerName: text("customer_name"),
   customerEmail: text("customer_email"),
   customerPhone: text("customer_phone"),
   deliveryAddress: text("delivery_address").notNull(),
   items: jsonb("items").$type<Array<{ id: string; name: string; qty: number; price: number }>>().notNull(),
-  subtotal: integer("subtotal").notNull(), // kobo (NGN * 100)? or NGN whole? We'll use NGN whole.
+  subtotal: integer("subtotal").notNull(),
   delivery: integer("delivery").notNull().default(0),
   total: integer("total").notNull(),
   paystackTxnId: text("paystack_txn_id"),

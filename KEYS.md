@@ -26,7 +26,8 @@ You can either:
 | Key | Env var | Visible to client? |
 |---|---|---|
 | `sk_test_…` / `sk_live_…` | `PAYSTACK_SECRET_KEY` | ❌ Server only |
-| `pk_test_…` / `pk_live_…` | `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | ✅ Public (bundled in client) |
+
+The hosted Paystack checkout flow doesn't need the public key — `checkoutAction` initializes the transaction server-side and redirects the user to the authorization URL. Only add `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` if you later switch to Paystack's inline-popup checkout.
 
 ### Webhook setup (required)
 
@@ -179,7 +180,6 @@ Anything that prints is missing. As of the last bootstrap, the missing list was:
 ```
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
-NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY
 NEXT_PUBLIC_POSTHOG_HOST
 NEXT_PUBLIC_POSTHOG_KEY
 NEXT_PUBLIC_WHATSAPP_OWNER_NUMBER

@@ -217,4 +217,36 @@
   @media (min-width: 768px) {
     .container-px { padding-inline: 2rem; }
   }
+
+  .prose-policy p { line-height: 1.65; }
+  .prose-policy ul, .prose-policy ol {
+    padding-left: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .prose-policy ul { list-style: disc; }
+  .prose-policy ol { list-style: decimal; }
+  .prose-policy ul ul, .prose-policy ol ol { margin-top: 0.5rem; }
+  .prose-policy strong { color: var(--foreground); font-weight: 600; }
+  .prose-policy a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+  .prose-policy a:hover { color: var(--accent); }
+  .prose-policy code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    padding: 0.1em 0.4em;
+    border-radius: 0.4rem;
+    background: var(--secondary);
+  }
+  .prose-policy hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: 1.25rem 0;
+  }
+  .prose-policy .callout {
+    border-left: 3px solid var(--primary);
+    padding: 0.5rem 0 0.5rem 1rem;
+    background: hsla(2, 92%, 50%, 0.05);
+    border-radius: 0.5rem;
+  }
 }

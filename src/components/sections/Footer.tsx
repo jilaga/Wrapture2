@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 export function Footer() {
   return (
     <footer className="border-t border-border">
-      <div className="container-px py-16 grid gap-10 md:grid-cols-3 items-start">
-        <div>
+      <div className="container-px py-16 grid gap-10 md:grid-cols-4 items-start">
+        <div className="md:col-span-1">
           <div className="font-display text-2xl tracking-tight">
             WRAP<span className="text-primary">TURE</span>
           </div>
@@ -16,10 +16,23 @@ export function Footer() {
         </div>
 
         <div className="flex flex-col gap-3 text-sm">
-          <Link href="#menu" className="hover:text-primary transition-colors">Menu</Link>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">
+            Shop
+          </p>
+          <Link href="/#menu" className="hover:text-primary transition-colors">Menu</Link>
           <Link href="/track" className="hover:text-primary transition-colors">Track order</Link>
           <Link href="/contact" className="hover:text-primary transition-colors">Contact</Link>
           <Link href="/faqs" className="hover:text-primary transition-colors">FAQs</Link>
+        </div>
+
+        <div className="flex flex-col gap-3 text-sm">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-1">
+            Legal
+          </p>
+          <Link href="/terms" className="hover:text-primary transition-colors">Terms of Service</Link>
+          <Link href="/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link>
+          <Link href="/refunds" className="hover:text-primary transition-colors">Refunds &amp; Cancellation</Link>
+          <Link href="/delivery" className="hover:text-primary transition-colors">Delivery Policy</Link>
         </div>
 
         <div className="flex flex-col md:items-end gap-5">
@@ -36,7 +49,7 @@ export function Footer() {
           </div>
           <Button
             className="rounded-2xl h-12 px-6 uppercase tracking-[0.2em] text-xs"
-            render={<Link href="#menu" />}
+            render={<Link href="/#menu" />}
           >
             Start an order
           </Button>

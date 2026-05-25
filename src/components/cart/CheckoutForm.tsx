@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -199,6 +200,17 @@ export function CheckoutForm({
         </Button>
         <p className="mt-3 text-[11px] text-center text-muted-foreground">
           Secure payment via Paystack. Order is placed once payment confirms.
+        </p>
+        <p className="mt-2 text-[10px] text-center text-muted-foreground leading-relaxed">
+          By paying you agree to our{" "}
+          <Link href="/terms" target="_blank" className="underline hover:text-foreground">Terms</Link>
+          ,{" "}
+          <Link href="/privacy" target="_blank" className="underline hover:text-foreground">Privacy Policy</Link>
+          ,{" "}
+          <Link href="/refunds" target="_blank" className="underline hover:text-foreground">Refunds</Link>
+          {" "}and{" "}
+          <Link href="/delivery" target="_blank" className="underline hover:text-foreground">Delivery</Link>
+          {" "}policy.
         </p>
       </div>
     </form>

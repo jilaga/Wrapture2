@@ -2,6 +2,7 @@ import { formatNGN, MENU } from "@/lib/menu";
 
 export type OrderForWhatsApp = {
   reference: string;
+  trackingNumber?: string | null;
   address: string;
   items: Record<string, number>;
   subtotal: number;
@@ -14,6 +15,7 @@ export type OrderForWhatsApp = {
 export function buildOrderMessage(order: OrderForWhatsApp): string {
   const lines: string[] = [];
   lines.push(`🔥 *NEW WRAPTURE ORDER*`);
+  if (order.trackingNumber) lines.push(`Tracking: *${order.trackingNumber}*`);
   lines.push(`Ref: \`${order.reference}\``);
   lines.push("");
   if (order.customerName) lines.push(`👤 ${order.customerName}`);
@@ -30,6 +32,16 @@ export function buildOrderMessage(order: OrderForWhatsApp): string {
   lines.push(`Subtotal: ${formatNGN(order.subtotal)}`);
   lines.push(`Delivery: ${formatNGN(order.delivery)}`);
   lines.push(`*Total: ${formatNGN(order.total)}*`);
+
+  if (order.trackingNumber) {
+    lines.push("");
+    lines.push(`_Commands:_`);
+    lines.push(`accept ${order.trackingNumber}`);
+    lines.push(`preparing ${order.trackingNumber}`);
+    lines.push(`ready ${order.trackingNumber}`);
+    lines.push(`dispatch ${order.trackingNumber} rider:Name phone:080xxxx`);
+    lines.push(`delivered ${order.trackingNumber}`);
+  }
   return lines.join("\n");
 }
 
@@ -40,15 +52,10 @@ export function buildWaMeLink(order: OrderForWhatsApp): string {
   return `https://wa.me/${cleaned}?text=${encodeURIComponent(buildOrderMessage(order))}`;
 }
 
-// Real owner notification via WhatsApp Cloud API
-export async function sendOwnerNotification(order: OrderForWhatsApp): Promise<{ ok: boolean; error?: string }> {
+async function callGraph(to: string, body: string): Promise<{ ok: boolean; error?: string }> {
   const token = process.env.WHATSAPP_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const owner = process.env.WHATSAPP_OWNER_NUMBER;
-
-  if (!token || !phoneId || !owner) {
-    return { ok: false, error: "WhatsApp env vars missing" };
-  }
+  if (!token || !phoneId) return { ok: false, error: "WhatsApp env vars missing" };
 
   const res = await fetch(`https://graph.facebook.com/v20.0/${phoneId}/messages`, {
     method: "POST",
@@ -58,9 +65,9 @@ export async function sendOwnerNotification(order: OrderForWhatsApp): Promise<{ 
     },
     body: JSON.stringify({
       messaging_product: "whatsapp",
-      to: owner.replace(/\D/g, ""),
+      to: to.replace(/\D/g, ""),
       type: "text",
-      text: { preview_url: false, body: buildOrderMessage(order) },
+      text: { preview_url: false, body },
     }),
   });
 
@@ -69,4 +76,16 @@ export async function sendOwnerNotification(order: OrderForWhatsApp): Promise<{ 
     return { ok: false, error: err };
   }
   return { ok: true };
+}
+
+// Generic outbound text — used to reply to staff commands and rider lookups.
+export async function sendText(to: string, body: string) {
+  return callGraph(to, body);
+}
+
+// Real owner notification via WhatsApp Cloud API
+export async function sendOwnerNotification(order: OrderForWhatsApp): Promise<{ ok: boolean; error?: string }> {
+  const owner = process.env.WHATSAPP_OWNER_NUMBER;
+  if (!owner) return { ok: false, error: "WHATSAPP_OWNER_NUMBER missing" };
+  return callGraph(owner, buildOrderMessage(order));
 }

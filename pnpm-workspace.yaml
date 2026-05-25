@@ -1,10 +1,16 @@
 allowBuilds:
-  core-js: set this to true or false
-  esbuild: set this to true or false
-  msw: set this to true or false
-  protobufjs: set this to true or false
-  sharp: set this to true or false
-  unrs-resolver: set this to true or false
-ignoredBuiltDependencies:
+  "@tailwindcss/oxide": true
+  core-js: true
+  esbuild: true
+  msw: true
+  protobufjs: true
+  sharp: true
+  unrs-resolver: true
+onlyBuiltDependencies:
+  - "@tailwindcss/oxide"
+  - core-js
+  - esbuild
+  - msw
+  - protobufjs
   - sharp
   - unrs-resolver

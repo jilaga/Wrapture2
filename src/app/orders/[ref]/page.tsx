@@ -6,12 +6,10 @@ import { ArrowLeft } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { db, orders } from "@/db";
 import { Header } from "@/components/layout/Header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { OrderTimeline } from "@/components/orders/OrderTimeline";
+import { TrackingLive } from "@/components/orders/TrackingLive";
 import { ReorderButton } from "@/components/account/ReorderButton";
 import { AdvanceStatusButton } from "@/components/orders/AdvanceStatusButton";
-import { STATUS_LABEL } from "@/lib/order-status";
 import { formatNGN } from "@/lib/menu";
 import type { OrderStatus, OrderStatusEvent } from "@/db/schema";
 
@@ -40,20 +38,28 @@ export default async function OrderDetailPage({ params }: { params: Params }) {
           <ArrowLeft className="w-3 h-3" /> All orders
         </Link>
 
-        <div className="flex items-start justify-between gap-4 mb-2">
-          <h1 className="font-display text-4xl md:text-5xl">Order tracking</h1>
-          <Badge className="bg-primary text-primary-foreground shrink-0 mt-2">
-            {STATUS_LABEL[order.status as OrderStatus] ?? order.status}
-          </Badge>
-        </div>
-        <p className="text-xs text-muted-foreground mb-2">Ref</p>
-        <p className="font-mono text-sm mb-10">{order.reference}</p>
+        <h1 className="font-display text-4xl md:text-5xl mb-4">Order tracking</h1>
+        {order.trackingNumber && (
+          <div className="mb-4">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Tracking number</p>
+            <p className="font-mono text-2xl tracking-wider">{order.trackingNumber}</p>
+          </div>
+        )}
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Reference</p>
+        <p className="font-mono text-xs text-muted-foreground mb-10">{order.reference}</p>
 
         <section className="rounded-3xl border border-border bg-card p-6 mb-6">
           <h2 className="text-xs uppercase tracking-widest text-muted-foreground mb-5">Status</h2>
-          <OrderTimeline
-            current={order.status as OrderStatus}
-            history={(order.statusHistory as OrderStatusEvent[]) ?? []}
+          <TrackingLive
+            trackingId={order.trackingNumber ?? order.reference}
+            initial={{
+              status: order.status as OrderStatus,
+              statusHistory: (order.statusHistory as OrderStatusEvent[]) ?? [],
+              rider:
+                order.riderName || order.riderPhone
+                  ? { name: order.riderName, phone: order.riderPhone }
+                  : null,
+            }}
           />
         </section>
 

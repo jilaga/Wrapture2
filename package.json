@@ -60,7 +60,9 @@
       "unrs-resolver",
       "msw",
       "@tailwindcss/oxide",
-      "esbuild"
+      "esbuild",
+      "core-js",
+      "protobufjs"
     ]
   }
 }

@@ -1,29 +1,25 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { db, orders } from "@/db";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { TrackingLive } from "@/components/orders/TrackingLive";
 import { formatNGN } from "@/lib/menu";
+import type { OrderStatus, OrderStatusEvent } from "@/db/schema";
 
-type SearchParams = Promise<{ ref?: string }>;
-
-const STATUS_LABEL: Record<string, string> = {
-  pending_payment: "Awaiting payment",
-  paid: "Paid · preparing",
-  preparing: "In the kitchen",
-  out_for_delivery: "Out for delivery",
-  delivered: "Delivered",
-  cancelled: "Cancelled",
-  failed: "Failed",
-};
+type SearchParams = Promise<{ id?: string; ref?: string }>;
 
 export default async function TrackPage({ searchParams }: { searchParams: SearchParams }) {
-  const { ref } = await searchParams;
+  const { id, ref } = await searchParams;
+  const lookup = id ?? ref;
 
   let order = null;
-  if (ref) {
-    const rows = await db.select().from(orders).where(eq(orders.reference, ref)).limit(1);
+  if (lookup) {
+    const rows = await db
+      .select()
+      .from(orders)
+      .where(or(eq(orders.trackingNumber, lookup), eq(orders.reference, lookup)))
+      .limit(1);
     order = rows[0] ?? null;
   }
 
@@ -32,32 +28,56 @@ export default async function TrackPage({ searchParams }: { searchParams: Search
       <Header />
       <main className="container-px pt-28 pb-16 max-w-xl">
         <h1 className="font-display text-5xl mb-2">Track order</h1>
-        <p className="text-muted-foreground mb-10">Drop your reference. We&apos;ll show you where it is.</p>
+        <p className="text-muted-foreground mb-10">
+          Enter the 6-digit tracking number we sent you.
+        </p>
 
         <form className="flex gap-2 mb-8">
           <input
-            name="ref"
-            defaultValue={ref ?? ""}
-            placeholder="WRP_…"
+            name="id"
+            inputMode="numeric"
+            defaultValue={lookup ?? ""}
+            placeholder="123456"
             className="flex-1 h-12 px-4 rounded-2xl border border-border bg-card text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <Button type="submit" className="rounded-2xl h-12 px-6">Track</Button>
         </form>
 
-        {ref && !order && (
-          <p className="text-sm text-muted-foreground text-center py-8">No order found for that reference.</p>
+        {lookup && !order && (
+          <p className="text-sm text-muted-foreground text-center py-8">
+            No order found for that tracking number.
+          </p>
         )}
 
         {order && (
           <article className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">{order.reference}</p>
-                <p className="text-sm mt-1">{new Date(order.createdAt).toLocaleString("en-NG")}</p>
-              </div>
-              <Badge className="bg-primary text-primary-foreground">{STATUS_LABEL[order.status] ?? order.status}</Badge>
+            <div className="mb-6">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                Tracking number
+              </p>
+              <p className="font-mono text-2xl tracking-wider">
+                {order.trackingNumber ?? order.reference}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {new Date(order.createdAt).toLocaleString("en-NG")}
+              </p>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">Delivering to: {order.deliveryAddress}</p>
+
+            <TrackingLive
+              trackingId={order.trackingNumber ?? order.reference}
+              initial={{
+                status: order.status as OrderStatus,
+                statusHistory: (order.statusHistory as OrderStatusEvent[]) ?? [],
+                rider:
+                  order.riderName || order.riderPhone
+                    ? { name: order.riderName, phone: order.riderPhone }
+                    : null,
+              }}
+            />
+
+            <p className="text-sm text-muted-foreground mt-6 mb-4">
+              Delivering to: {order.deliveryAddress}
+            </p>
             <ul className="space-y-1 text-sm">
               {(order.items ?? []).map((it) => (
                 <li key={it.id} className="flex justify-between">

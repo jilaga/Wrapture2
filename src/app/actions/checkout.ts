@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { db, orders, user, address as addressTable } from "@/db";
 import { MENU } from "@/lib/menu";
 import { generateReference, initializeTransaction } from "@/lib/paystack";
+import { generateTrackingNumber } from "@/lib/tracking";
 
 type CheckoutInput = {
   items: Record<string, number>;
@@ -122,10 +123,12 @@ export async function checkoutAction(input: CheckoutInput): Promise<CheckoutResu
   }
 
   const reference = generateReference();
+  const trackingNumber = await generateTrackingNumber();
   const now = new Date().toISOString();
 
   await db.insert(orders).values({
     reference,
+    trackingNumber,
     userId,
     status: "pending_payment",
     statusHistory: [{ status: "pending_payment", at: now }],

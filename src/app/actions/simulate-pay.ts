@@ -23,6 +23,7 @@ export async function confirmSimulatedPayment(reference: string) {
 
   await sendOwnerNotification({
     reference: order.reference,
+    trackingNumber: order.trackingNumber,
     address: order.deliveryAddress,
     items: itemsMap,
     subtotal: order.subtotal,

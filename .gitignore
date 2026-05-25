@@ -44,3 +44,5 @@ cookies.txt
 *.tsbuildinfo
 next-env.d.ts
 .env*.local
+
+/docs

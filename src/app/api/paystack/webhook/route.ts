@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
 
       const result = await sendOwnerNotification({
         reference: order.reference,
+        trackingNumber: order.trackingNumber,
         address: order.deliveryAddress,
         items: itemsMap,
         subtotal: order.subtotal,

@@ -119,6 +119,8 @@
   --animate-fade-up: fade-up 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   --animate-smoke-rise: smoke-rise 14s ease-in-out infinite;
   --animate-smoke-rise-2: smoke-rise-2 18s ease-in-out infinite;
+  --animate-smoke-drift: smoke-drift 24s ease-in-out infinite;
+  --animate-smoke-halo: smoke-halo 30s ease-in-out infinite;
 
   @keyframes marquee {
     from { transform: translateX(0); }
@@ -137,6 +139,17 @@
     0%   { transform: translate3d(0, 20%, 0) scale(0.7); opacity: 0; }
     25%  { opacity: 0.7; }
     100% { transform: translate3d(-25%, -130%, 0) scale(1.8); opacity: 0; }
+  }
+  @keyframes smoke-drift {
+    0%   { transform: translate3d(-15%, 0, 0) scale(1);   opacity: 0.0; }
+    20%  { opacity: 0.55; }
+    50%  { transform: translate3d(0, -8%, 0)  scale(1.1); opacity: 0.7; }
+    80%  { opacity: 0.35; }
+    100% { transform: translate3d(15%, 0, 0)  scale(1.05); opacity: 0.0; }
+  }
+  @keyframes smoke-halo {
+    0%, 100% { transform: scale(0.9); opacity: 0.2; }
+    50%      { transform: scale(1.15); opacity: 0.55; }
   }
 }
 
@@ -176,6 +189,12 @@
     background: radial-gradient(circle, hsla(36, 18%, 92%, 0.18) 0%, hsla(36, 18%, 92%, 0) 70%);
     pointer-events: none;
     will-change: transform, opacity;
+  }
+  .smoke-warm {
+    background: radial-gradient(circle, hsla(14, 95%, 56%, 0.22) 0%, hsla(2, 92%, 50%, 0.05) 50%, hsla(0, 0%, 0%, 0) 75%);
+  }
+  .smoke-cool {
+    background: radial-gradient(circle, hsla(36, 30%, 94%, 0.16) 0%, hsla(36, 18%, 92%, 0.04) 55%, hsla(0, 0%, 0%, 0) 75%);
   }
 
   .hero-to-shop {

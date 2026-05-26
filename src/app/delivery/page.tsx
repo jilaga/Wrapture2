@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 import { PolicyShell, type PolicySection } from "@/components/legal/PolicyShell";
 
 export const metadata: Metadata = {
-  title: "Delivery Policy · Wrapture",
+  title: "Delivery Policy",
   description:
     "Where Wrapture delivers, how long it takes, the rider handover and what happens when something goes wrong en route.",
+  alternates: { canonical: "/delivery" },
 };
 
 const LAST_UPDATED = "25 May 2026";

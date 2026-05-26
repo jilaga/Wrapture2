@@ -1,9 +1,19 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Hero } from "@/components/sections/Hero";
 import { MenuSection } from "@/components/sections/Menu";
 import { Reviews } from "@/components/sections/Reviews";
 import { Reels } from "@/components/sections/Reels";
 import { Footer } from "@/components/sections/Footer";
+
+export const metadata: Metadata = {
+  title: {
+    absolute: "Wrapture · Asaba's hottest shawarma & wraps, delivered",
+  },
+  description:
+    "Hot shawarma, signature wraps and loaded fries — cooked fresh in Asaba, delivered to your door in under 45 minutes. Pay with card or transfer via Paystack.",
+  alternates: { canonical: "/" },
+};
 
 export default function HomePage() {
   return (

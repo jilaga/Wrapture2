@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 import { PolicyShell, type PolicySection } from "@/components/legal/PolicyShell";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy · Wrapture",
+  title: "Privacy Policy",
   description:
     "How Wrapture collects, uses and protects your personal data — written to comply with the Nigeria Data Protection Act 2023 and the NDPR 2019.",
+  alternates: { canonical: "/privacy" },
 };
 
 const LAST_UPDATED = "25 May 2026";

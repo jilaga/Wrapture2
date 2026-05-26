@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { db, orders } from "@/db";
 import { Button } from "@/components/ui/button";
 import { CallbackPoller } from "./CallbackPoller";
+
+export const metadata: Metadata = {
+  title: "Confirming payment",
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Promise<{ reference?: string; trxref?: string }>;
 

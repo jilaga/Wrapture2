@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 import { PolicyShell, type PolicySection } from "@/components/legal/PolicyShell";
 
 export const metadata: Metadata = {
-  title: "Refund & Cancellation Policy · Wrapture",
+  title: "Refund & Cancellation Policy",
   description:
     "When Wrapture refunds, replaces or credits an order, and how long the money takes to reach you.",
+  alternates: { canonical: "/refunds" },
 };
 
 const LAST_UPDATED = "25 May 2026";

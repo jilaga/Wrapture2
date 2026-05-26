@@ -37,3 +37,12 @@ export function Facebook(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+export function TikTok(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base(props)}>
+      <path d="M14 2v12.2a3.6 3.6 0 1 1-3.6-3.6h1.1" />
+      <path d="M14 2c0 3.3 2.7 6 6 6" />
+    </svg>
+  );
+}

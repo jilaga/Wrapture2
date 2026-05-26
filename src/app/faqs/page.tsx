@@ -1,5 +1,12 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/sections/Footer";
+
+export const metadata: Metadata = {
+  title: "FAQs",
+  description: "Wrapture FAQs — delivery area, payment options, allergens, catering and minimum order.",
+  alternates: { canonical: "/faqs" },
+};
 
 const FAQS = [
   { q: "Where do you deliver?", a: "Everywhere in Asaba. Outside Asaba — not yet." },

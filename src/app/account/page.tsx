@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -5,6 +6,11 @@ import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/button";
 import { Bookmark, Package, ShoppingBag } from "lucide-react";
 import { SignOutButton } from "@/components/account/SignOutButton";
+
+export const metadata: Metadata = {
+  title: "Your account",
+  robots: { index: false, follow: false },
+};
 
 export default async function AccountPage() {
   const session = await auth.api.getSession({ headers: await headers() });

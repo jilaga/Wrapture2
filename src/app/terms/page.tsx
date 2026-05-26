@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 import { PolicyShell, type PolicySection } from "@/components/legal/PolicyShell";
 
 export const metadata: Metadata = {
-  title: "Terms of Service · Wrapture",
+  title: "Terms of Service",
   description:
     "The rules that cover ordering, paying for and receiving Wrapture wraps in Asaba, Nigeria.",
+  alternates: { canonical: "/terms" },
 };
 
 const LAST_UPDATED = "25 May 2026";

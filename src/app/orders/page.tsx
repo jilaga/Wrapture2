@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { desc, eq } from "drizzle-orm";
@@ -11,6 +12,11 @@ import { formatNGN } from "@/lib/menu";
 import { ReorderButton } from "@/components/account/ReorderButton";
 import { STATUS_LABEL } from "@/lib/order-status";
 import type { OrderStatus } from "@/db/schema";
+
+export const metadata: Metadata = {
+  title: "Your orders",
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Promise<{ placed?: string }>;
 

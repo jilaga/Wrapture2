@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db, orders } from "@/db";
 import { formatNGN } from "@/lib/menu";
 import { confirmSimulatedPayment, cancelSimulatedPayment } from "@/app/actions/simulate-pay";
 import { ConfirmPayButton } from "./ConfirmPayButton";
+
+export const metadata: Metadata = {
+  title: "Simulated payment",
+  robots: { index: false, follow: false },
+};
 
 type Params = Promise<{ ref: string }>;
 

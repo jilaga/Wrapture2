@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { ArrowLeft } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Order tracking",
+  robots: { index: false, follow: false },
+};
 import { auth } from "@/lib/auth";
 import { db, orders } from "@/db";
 import { Header } from "@/components/layout/Header";

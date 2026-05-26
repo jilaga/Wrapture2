@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { desc, eq } from "drizzle-orm";
@@ -8,6 +9,11 @@ import { AddAddressForm } from "@/components/account/AddAddressForm";
 import { AddressCard } from "@/components/account/AddressCard";
 import { Button } from "@/components/ui/button";
 import { Bookmark } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Saved addresses",
+  robots: { index: false, follow: false },
+};
 
 export default async function AddressesPage() {
   const session = await auth.api.getSession({ headers: await headers() });

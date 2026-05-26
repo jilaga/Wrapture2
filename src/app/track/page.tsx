@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { eq, or } from "drizzle-orm";
 import { db, orders } from "@/db";
@@ -6,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { TrackingLive } from "@/components/orders/TrackingLive";
 import { formatNGN } from "@/lib/menu";
 import type { OrderStatus, OrderStatusEvent } from "@/db/schema";
+
+export const metadata: Metadata = {
+  title: "Track an order",
+  description: "Enter your 6-digit Wrapture tracking number to see your order's status live.",
+  robots: { index: false, follow: false },
+};
 
 type SearchParams = Promise<{ id?: string; ref?: string }>;
 

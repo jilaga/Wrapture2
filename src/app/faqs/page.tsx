@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/sections/Footer";
+import { JsonLd } from "@/components/seo/JsonLd";
 
 export const metadata: Metadata = {
   title: "FAQs",
@@ -17,9 +18,20 @@ const FAQS = [
   { q: "Do you cater events?", a: "Yes. WhatsApp us at least 48 hours ahead." },
 ];
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQS.map((f) => ({
+    "@type": "Question",
+    name: f.q,
+    acceptedAnswer: { "@type": "Answer", text: f.a },
+  })),
+};
+
 export default function FaqsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <JsonLd data={faqSchema} />
       <Header />
       <main className="container-px pt-28 pb-16 max-w-2xl flex-1">
         <h1 className="font-display text-5xl mb-2">FAQs</h1>

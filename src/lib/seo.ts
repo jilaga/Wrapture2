@@ -17,9 +17,22 @@ const SOCIAL_PROFILES = [
   "https://facebook.com/wrapture",
 ];
 
+import { MENU } from "@/lib/menu";
+
 export function restaurantSchema() {
   const base = getBaseUrl();
   const phone = process.env.NEXT_PUBLIC_WHATSAPP_OWNER_NUMBER ?? "";
+
+  const menuItems = MENU.map((item) => ({
+    "@type": "MenuItem",
+    name: item.name,
+    description: item.tagline,
+    offers: {
+      "@type": "Offer",
+      price: item.price,
+      priceCurrency: "NGN",
+    },
+  }));
 
   return {
     "@context": "https://schema.org",
@@ -42,6 +55,22 @@ export function restaurantSchema() {
       addressRegion: "Delta",
       addressCountry: "NG",
     },
+    // Asaba CBD approximate centroid. Replace with the kitchen's real
+    // coordinates once the lease is finalised — Google uses this for the
+    // map pin and for distance ranking in "near me" queries.
+    geo: {
+      "@type": "GeoCoordinates",
+      latitude: 6.198,
+      longitude: 6.731,
+    },
+    areaServed: {
+      "@type": "City",
+      name: "Asaba",
+      containedInPlace: {
+        "@type": "AdministrativeArea",
+        name: "Delta State",
+      },
+    },
     openingHoursSpecification: [
       {
         "@type": "OpeningHoursSpecification",
@@ -58,7 +87,24 @@ export function restaurantSchema() {
         closes: "23:00",
       },
     ],
-    hasMenu: `${base}/#menu`,
+    hasMenu: {
+      "@type": "Menu",
+      name: "Wrapture menu",
+      url: `${base}/#menu`,
+      hasMenuSection: [
+        {
+          "@type": "MenuSection",
+          name: "Menu",
+          hasMenuItem: menuItems,
+        },
+      ],
+    },
+    // Uncomment once Wrapture has 10+ real Google reviews:
+    // aggregateRating: {
+    //   "@type": "AggregateRating",
+    //   ratingValue: "4.8",
+    //   reviewCount: "120",
+    // },
     sameAs: SOCIAL_PROFILES,
   };
 }
